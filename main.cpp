@@ -3,7 +3,8 @@
 //  Multi-kernel benchmark harness
 // ============================================================
 
-// nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89 -fast  -lnvToolsExt  -o main main.cpp
+//  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89 -fast  -cuda -lnvToolsExt  -o main main.cpp 
+// -cuda for cuda kernel
 // OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main
 // OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main --no-sequential
 #include <cmath>
@@ -71,14 +72,17 @@ void sequential(const double* __restrict__ u,
 {
     for (int i = 1; i < nx-1; ++i)
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
 // Parallelizes only the outer i loop across CPU threads. Good cache reuse.
 // Best CPU perfs (x19)
+// When a thread encounters a parallel construct, a team of threads is created to execute the parallel
+// An implicit barrier occurs at the end of a parallel region. After the end of a parallel region, only the primary thread of the team resumes execution of the enclosing task region.
 void openmp_parallel_for(const double* __restrict__ u,
                                double* __restrict__ un,
                          int nx, int ny, double rx, double ry, bool on_gpu)
@@ -86,9 +90,10 @@ void openmp_parallel_for(const double* __restrict__ u,
     #pragma omp parallel for
     for (int i = 1; i < nx-1; ++i) //#omp parallel
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -102,9 +107,10 @@ void openmp_parallel_for_collapse(const double* __restrict__ u,
     #pragma omp parallel for collapse(2) //#omp parallel
     for (int i = 1; i < nx-1; ++i)
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -112,7 +118,7 @@ void openmp_parallel_for_collapse(const double* __restrict__ u,
 // GPU: Poor performance(x5). 142blocks of 128 threads ? not sure whats going on. Poor maping of parallel for on GPU
 // It seems from "Loop parallelized across threads(128), schedule(static)" that we launch 1 block
 //      Small D2H/H2D between kernel ? Yes
-// CPU: Poor perf (x1). No idea why not the same tha, openmp_parallel_for. No SIMD ? I think if off -> kills // for
+// CPU: Poor perf (x1). No idea why not the same tha, openmp_parallel_for. kills // target and parallel for
 void openmp_target_parallel_for(const double* __restrict__ u,
                                       double* __restrict__ un,
                                 int nx, int ny, double rx, double ry, bool on_gpu)
@@ -120,15 +126,16 @@ void openmp_target_parallel_for(const double* __restrict__ u,
     #pragma omp target parallel for if (on_gpu)
     for (int i = 1; i < nx-1; ++i) //GPU: Loop parallelized across threads(128), schedule(static). Loop not vectorized/parallelized: not countable. CPU: Loop parallelized across threads, schedule(static)
         for (int j = 1; j < ny-1; ++j) {  //GPU: Generated vector simd code for the loop
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
 // GPU: Poor performance(x5). 142blocks of 128 threads ? not sure whats going on. Poor maping of parallel for on GPU
 //      Small D2H/H2D between kernel ? Yes
-// CPU: Poor perf (x1). No idea why not the same tha, openmp_parallel_for. No SIMD  I think if off -> kills // for
+// CPU: Poor perf (x1). No idea why not the same tha, openmp_parallel_for. kills // target and parallel for
 void openmp_target_parallel_for_collapse(const double* __restrict__ u,
                                                double* __restrict__ un,
                                          int nx, int ny, double rx, double ry, bool on_gpu)
@@ -136,15 +143,19 @@ void openmp_target_parallel_for_collapse(const double* __restrict__ u,
     #pragma omp target parallel for collapse(2) if (on_gpu)
     for (int i = 1; i < nx-1; ++i) // GPU Loop parallelized across threads(128), schedule(static) Loop not vectorized/parallelized: not countable Generated vector simd code for the loop. CPU: Loop parallelized across threads, schedule(static)
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
 // GPU: Poor performance(x8). 32 blocks of 128 threads = NX threads, only outer//
 //      Small D2H/H2D between kernel ? NO
 // CPU: Okay perfs perf(x11). Looks like  openmp_parallel_for_collapse 
+// When a thread encounters a teams construct, a league of teams is created. if: one team
+//A loop construct speciﬁes that the logical iterations of the associated loops may execute concurrently and permits the encountering threads to execute the loop accordingly
+//Team sert un peu a rien loop peut spawn des team
 void openmp_target_team_loop(const double* __restrict__ u,
                                    double* __restrict__ un,
                              int nx, int ny, double rx, double ry, bool on_gpu)
@@ -152,9 +163,10 @@ void openmp_target_team_loop(const double* __restrict__ u,
     #pragma omp target teams loop if (on_gpu)
     for (int i = 1; i < nx-1; ++i) // GPU: Loop parallelized across teams, threads(128); Loop parallelized across threads
         for (int j = 1; j < ny-1; ++j) { //Loop run sequentially // Loop carried dependence of un-> prevents parallelization
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -168,9 +180,10 @@ void openmp_target_team_loop_collapse(const double* __restrict__ u,
     #pragma omp target teams loop collapse(2) if (on_gpu)
     for (int i = 1; i < nx-1; ++i) // Loop parallelized across teams, threads(128) collapse(2) Loop parallelized across threads
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -178,6 +191,7 @@ void openmp_target_team_loop_collapse(const double* __restrict__ u,
 // GPU: Bad performance(x1.8). NX=4096 blocks of 128 thread but no inner //
 //      Small D2H/H2D between kernel ? YES
 // CPU: Same as seq(x1). teams+parallel_for=no // on CPU ?
+// The distribute construct speciﬁes that the iterations of one or more loops will be executed by the initial teams in the context of their implicit tasks. The iterations are distributed across the initial threads of all initial teams that execute the teams region to which the distribute region binds. No implicit barrier occurs at the end of a distribute region
 void openmp_target_team_distribute(const double* __restrict__ u,
                                          double* __restrict__ un,
                                    int nx, int ny, double rx, double ry, bool on_gpu)
@@ -185,15 +199,32 @@ void openmp_target_team_distribute(const double* __restrict__ u,
     #pragma omp target teams distribute if (on_gpu)
     for (int i = 1; i < nx-1; ++i)
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
+        }
+}
+
+
+//Distributr alone without parallel is TERRIBLE, it lanches blocks that do no inner //
+void openmp_target_team_distribute_collapse(const double* __restrict__ u,
+                                         double* __restrict__ un,
+                                   int nx, int ny, double rx, double ry, bool on_gpu)
+{
+    #pragma omp target teams distribute collapse(2) if (on_gpu)
+    for (int i = 1; i < nx-1; ++i)
+        for (int j = 1; j < ny-1; ++j) {
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
 // GPU: Not Full performance(x5). 32 blocks of 128 threads. 32*128=4096=NX. Only outer is //
 //      Small D2H/H2D between kernel ? NO
-// CPU: Same as seq(x1). teams+parallel_for=no // on CPU ?
+// CPU: Same as seq(x1). if kills  target parallel
 void openmp_target_team_distribute_for(const double* __restrict__ u,
                                              double* __restrict__ un,
                                        int nx, int ny, double rx, double ry, bool on_gpu)
@@ -201,9 +232,10 @@ void openmp_target_team_distribute_for(const double* __restrict__ u,
     #pragma omp target teams distribute parallel for if (on_gpu)
     for (int i = 1; i < nx-1; ++i)
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -219,9 +251,10 @@ void openmp_target_team_distribute_nestedfor(const double* __restrict__ u,
     for (int i = 1; i < nx-1; ++i)
         #pragma omp parallel for
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
@@ -235,12 +268,15 @@ void openmp_target_team_distribute_for_collapse(const double* __restrict__ u,
     #pragma omp target teams distribute parallel for collapse(2) if (on_gpu)
     for (int i = 1; i < nx-1; ++i)
         for (int j = 1; j < ny-1; ++j) {
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
+// GPU: Poor performance(x8). 32 blocks of 128 threads = NX threads, only outer//
+//      Small D2H/H2D between kernel ? NO
 void openmp_target_loop(const double* __restrict__ u,
                                    double* __restrict__ un,
                              int nx, int ny, double rx, double ry, bool on_gpu)
@@ -248,13 +284,14 @@ void openmp_target_loop(const double* __restrict__ u,
     #pragma omp target loop if (on_gpu)
     for (int i = 1; i < nx-1; ++i) 
         for (int j = 1; j < ny-1; ++j) { 
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
 }
 
-//No team needed !
+//Full perf CPU et GPU !!
 void openmp_target_loop_collapse(const double* __restrict__ u,
                                    double* __restrict__ un,
                              int nx, int ny, double rx, double ry, bool on_gpu)
@@ -262,10 +299,72 @@ void openmp_target_loop_collapse(const double* __restrict__ u,
     #pragma omp target loop collapse(2) if (on_gpu)
     for (int i = 1; i < nx-1; ++i) 
         for (int j = 1; j < ny-1; ++j) { 
-            double lap = (u[idx(i-1,j)] - 2.0*u[idx(i,j)] + u[idx(i+1,j)]) * rx
-                       + (u[idx(i,j-1)] - 2.0*u[idx(i,j)] + u[idx(i,j+1)]) * ry;
-            un[idx(i,j)] = u[idx(i,j)] + lap;
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
         }
+}
+
+//Also possible with metadirective to e.g. not desacritavte parallel on CPU with a if that only should deactivate target
+//from: https://passlab.github.io/Examples/contents/Chap_program_control/7_Metadirectives.html
+//also possible:
+// when(     device={arch("nvptx")}:nvptx architecture is active in the OpenMP context
+// when( implementation={vendor(nvidia)}, device={arch("kepler")}: when clause to distinguish between platforms.
+// when( implementation={vendor(amd)},device={arch("fiji"  ): when clause to distinguish between platforms.
+// when(   construct={target}:: are you in a target region ?
+void openmp_metadirective(const double* __restrict__ u,
+                                   double* __restrict__ un,
+                             int nx, int ny, double rx, double ry, bool on_gpu)
+{
+    #pragma omp metadirective \
+        when( user={condition(on_gpu)}: target teams distribute parallel for collapse(2)) \
+        default(parallel for collapse(2))     
+    for (int i = 1; i < nx-1; ++i) 
+        for (int j = 1; j < ny-1; ++j) { 
+            double center = u[idx(i,j)];
+            double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
+                       + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
+            un[idx(i,j)] = center + lap;
+        }
+}
+
+
+__global__
+void cuda_kernel(const double* __restrict__ u,
+                 double* __restrict__ un,
+                 int nx, int ny,
+                 double rx, double ry)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // skip boundaries
+    if (i >= 1 && i < nx - 1 &&
+        j >= 1 && j < ny - 1)
+    {
+        double center = u[idx(i, j)];
+
+        double lap =
+            (u[idx(i - 1, j)] - 2.0 * center + u[idx(i + 1, j)]) * rx +
+            (u[idx(i, j - 1)] - 2.0 * center + u[idx(i, j + 1)]) * ry;
+
+        un[idx(i, j)] = center + lap;
+    }
+}
+
+//Best of all but not cpu
+void cuda(const double* __restrict__ u,
+                                   double* __restrict__ un,
+                             int nx, int ny, double rx, double ry, bool on_gpu)
+{
+    dim3 blockDim(16, 16);
+    dim3 gridDim((nx  + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
+
+    #pragma omp target data use_device_ptr(u,un) //necessary otherwise u and un are host vectors
+    {
+    cuda_kernel<<<gridDim, blockDim>>>(u, un, nx, ny, rx, ry);
+    }
 }
 
 
@@ -362,16 +461,23 @@ int main(int argc, char** argv)
         { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
         { "openmp_target_team_distribute",           openmp_target_team_distribute,           true},
         { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
+        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           true},
+        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       true},
         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
         { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, true},
-       //{ "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
+        { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
         { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, true},
-       // { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
+        { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
         { "openmp_target_loop", openmp_target_loop, true},
         { "openmp_target_loop", openmp_target_loop, false},
         { "openmp_target_loop_collapse", openmp_target_loop_collapse, true},
         { "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
+        { "openmp_metadirective", openmp_metadirective, true},
+        { "openmp_metadirective", openmp_metadirective, false},
+
+        { "cuda", cuda, true},
+
     };
 
     // ---- compute column width from longest kernel name ------
@@ -407,6 +513,7 @@ int main(int argc, char** argv)
     double t_ref = -1.0;
 
     nvtxRangePushA("Alloc GPU");
+    //The target data construct maps variables to a device data environment. When a target data construct is encountered, the encountering task executes the region. When an if clause is present and the if clause expression evaluates to false, the target device is the host.
     #pragma omp target enter data map(alloc: pu[0:N], pu_new[0:N]) //enter / exit are scope less ! no nee to {}. pu and u are on the gpu until exit
     nvtxRangePop(); //For scoping, use omp target data
 
