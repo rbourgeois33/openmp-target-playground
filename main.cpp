@@ -3,24 +3,14 @@
 //  Multi-kernel benchmark harness
 // ============================================================
 
-//  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89,keepptx -fast  -cuda -lnvToolsExt  -o main main.cpp 
+//  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89,keepptx -fast  -cuda -lnvToolsExt  -o main main.cpp  (-cuda for cuda kernel)
 // ptxas -v --gpu-name sm_89 main.n001.ptx &>out_ptxas.txt
-// -cuda for cuda kernel
-// ncu --set=full --import-source=yes -fo out ./main
-//  nsys profile ./main
+// ncu --set=full --import-source=yes -fo report.ncu-rep ./main
+// nsys profile -o report.nsys-rep ./main
 
-//we see
-
-// ptxas info    : Compiling entry function 'nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L187_20' for 'sm_89'
-//     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-// ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
-
-// ptxas info    : Function properties for _Z11cuda_kernelPKdPdiidd
-//     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-// ptxas info    : Used 18 registers, used 0 barriers, 392 bytes cmem[0]
 
 // OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main
-// OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main --no-sequential
+
 #include <cmath>
 #include <cstring>
 #include <chrono>
@@ -37,7 +27,7 @@ static constexpr int    NY          = 2048;
 static constexpr double LX          = 1.0;
 static constexpr double LY          = 1.0;
 static constexpr double ALPHA       = 0.01;
-static constexpr int    NSTEP       = 2000;
+static constexpr int    NSTEP       = 2;
 static constexpr int    PRINT_EVERY = 250;
 const long long N      = (long long)NX * NY;
 
@@ -365,12 +355,12 @@ void cuda_kernel(const double* __restrict__ u,
                  int nx, int ny,
                  double rx, double ry)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x; //j is fast
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
 
     // skip boundaries
-    if (i >= 1 && i < nx - 1 &&
-        j >= 1 && j < ny - 1)
+    if ((i >= 1 && i < nx - 1) &&
+        (j >= 1 && j < ny - 1))
     {
         double center = u[idx(i, j)];
 
@@ -388,11 +378,11 @@ void cuda(const double* __restrict__ u,
                              int nx, int ny, double rx, double ry, bool on_gpu)
 {
     dim3 blockDim(16, 16);
-    dim3 gridDim((nx  + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
+    dim3 gridDim((ny  + blockDim.x - 1) / blockDim.x, (nx + blockDim.y - 1) / blockDim.y);
 
     #pragma omp target data use_device_ptr(u,un) //necessary otherwise u and un are host vectors
     {
-    cuda_kernel<<<gridDim, blockDim>>>(u, un, nx, ny, rx, ry);
+        cuda_kernel<<<gridDim, blockDim>>>(u, un, nx, ny, rx, ry);
     }
 }
 
@@ -438,7 +428,6 @@ Result run_kernel(const Kernel& k, double *pu, double* pu_new)
     #pragma omp target update to(pu[0:N]) if (k.on_gpu)
     nvtxRangePop();
     nvtxRangePushA("Steps");
-
     {
         t0 = clk::now();
         for (int n = 0; n < NSTEP; ++n) {
@@ -447,6 +436,7 @@ Result run_kernel(const Kernel& k, double *pu, double* pu_new)
             nvtxRangePop();
             t += DT;
             std::swap(pu, pu_new);
+            cudaDeviceSynchronize();
         }
         t1 = clk::now();
     }
@@ -478,32 +468,32 @@ int main(int argc, char** argv)
     // ---- register kernels (name, fn, on_gpu) -
     std::vector<Kernel> kernels = {
         { "sequential",                              sequential,                              false},
-        { "openmp_parallel_for",                     openmp_parallel_for,                     false},
-        { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
-        { "openmp_target_parallel_for",              openmp_target_parallel_for,              true},
-        { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
-        { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     true},
-        { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
-        { "openmp_target_team_loop",                 openmp_target_team_loop,                 true},
-        { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
-        { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        true},
-        { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
-        { "openmp_target_team_distribute",           openmp_target_team_distribute,           true},
-        { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
-        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           true},
-        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
-        { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       true},
-        { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
-        { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, true},
-        { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
-        { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, true},
-        { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
-        { "openmp_target_loop", openmp_target_loop, true},
-        { "openmp_target_loop", openmp_target_loop, false},
-        { "openmp_target_loop_collapse", openmp_target_loop_collapse, true},
-        { "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
-        { "openmp_metadirective", openmp_metadirective, true},
-        { "openmp_metadirective", openmp_metadirective, false},
+         { "openmp_parallel_for",                     openmp_parallel_for,                     false},
+         { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
+         { "openmp_target_parallel_for",              openmp_target_parallel_for,              true},
+         { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
+         { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     true},
+         { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
+         { "openmp_target_team_loop",                 openmp_target_team_loop,                 true},
+         { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
+         { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        true},
+         { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
+         { "openmp_target_team_distribute",           openmp_target_team_distribute,           true},
+         { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
+         { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           true},
+         { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
+         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       true},
+         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
+         { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, true},
+         { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
+         { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, true},
+         { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
+         { "openmp_target_loop", openmp_target_loop, true},
+         { "openmp_target_loop", openmp_target_loop, false},
+         { "openmp_target_loop_collapse", openmp_target_loop_collapse, true},
+         { "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
+         { "openmp_metadirective", openmp_metadirective, true},
+         { "openmp_metadirective", openmp_metadirective, false},
 
         { "cuda", cuda, true},
 
