@@ -1,0 +1,116 @@
+ptxas info    : 24 bytes gmem, 16 bytes cmem[4]
+ptxas info    : Compiling entry function 'nvkernel__Z35openmp_target_parallel_for_collapsePKdPdiiddb_F1L160_9' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z35openmp_target_parallel_for_collapsePKdPdiiddb_F1L160_9
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 112 bytes cumulative stack size, 416 bytes cmem[0], 32 bytes cmem[2]
+ptxas info    : Compile time = 19.724 ms
+ptxas info    : Function properties for __hxdTargetParallelBegin
+    8 bytes stack frame, 4 bytes spill stores, 4 bytes spill loads
+ptxas info    : Function properties for __hxdTargetTeamsBegin
+    48 bytes stack frame, 44 bytes spill stores, 44 bytes spill loads
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39_F1L277_42
+    64 bytes stack frame, 60 bytes spill stores, 60 bytes spill loads
+ptxas info    : Compiling entry function 'nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39
+    608 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 46 registers, used 1 barriers, 720 bytes cumulative stack size, 408 bytes cmem[0], 32 bytes cmem[2]
+ptxas info    : Compile time = 58.061 ms
+ptxas info    : Function properties for __hxdTargetParallelBegin
+    8 bytes stack frame, 4 bytes spill stores, 4 bytes spill loads
+ptxas info    : Function properties for __hxdTargetTeamsBegin
+    48 bytes stack frame, 44 bytes spill stores, 44 bytes spill loads
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39_F1L277_42
+    64 bytes stack frame, 60 bytes spill stores, 60 bytes spill loads
+ptxas info    : Compiling entry function 'nvkernel__Z38openmp_target_team_distribute_collapsePKdPdiiddb_F1L236_27' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z38openmp_target_team_distribute_collapsePKdPdiiddb_F1L236_27
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 36 registers, used 1 barriers, 112 bytes cumulative stack size, 408 bytes cmem[0], 32 bytes cmem[2]
+ptxas info    : Compile time = 20.133 ms
+ptxas info    : Function properties for __hxdTargetParallelBegin
+    8 bytes stack frame, 4 bytes spill stores, 4 bytes spill loads
+ptxas info    : Function properties for __hxdTargetTeamsBegin
+    48 bytes stack frame, 44 bytes spill stores, 44 bytes spill loads
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39_F1L277_42
+    64 bytes stack frame, 60 bytes spill stores, 60 bytes spill loads
+ptxas info    : Compiling entry function 'nvkernel__Z29openmp_target_team_distributePKdPdiiddb_F1L219_22' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z29openmp_target_team_distributePKdPdiiddb_F1L219_22
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 112 bytes cumulative stack size, 408 bytes cmem[0], 32 bytes cmem[2]
+ptxas info    : Compile time = 17.488 ms
+ptxas info    : Function properties for __hxdTargetParallelBegin
+    8 bytes stack frame, 4 bytes spill stores, 4 bytes spill loads
+ptxas info    : Function properties for __hxdTargetTeamsBegin
+    48 bytes stack frame, 44 bytes spill stores, 44 bytes spill loads
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39_F1L277_42
+    64 bytes stack frame, 60 bytes spill stores, 60 bytes spill loads
+ptxas info    : Compiling entry function 'nvkernel__Z26openmp_target_parallel_forPKdPdiiddb_F1L142_4' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z26openmp_target_parallel_forPKdPdiiddb_F1L142_4
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 112 bytes cumulative stack size, 416 bytes cmem[0], 32 bytes cmem[2]
+ptxas info    : Compile time = 17.534 ms
+ptxas info    : Function properties for __hxdTargetParallelBegin
+    8 bytes stack frame, 4 bytes spill stores, 4 bytes spill loads
+ptxas info    : Function properties for __hxdTargetTeamsBegin
+    48 bytes stack frame, 44 bytes spill stores, 44 bytes spill loads
+ptxas info    : Function properties for nvkernel__Z39openmp_target_team_distribute_nestedforPKdPdiiddb_F1L273_39_F1L277_42
+    64 bytes stack frame, 60 bytes spill stores, 60 bytes spill loads
+ptxas info    : Compiling entry function 'nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L208_20' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L208_20
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 3.843 ms
+ptxas info    : Compiling entry function 'nvkernel__Z27openmp_target_loop_collapsePKdPdiiddb_F1L325_58' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z27openmp_target_loop_collapsePKdPdiiddb_F1L325_58
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 3.838 ms
+ptxas info    : Compiling entry function 'nvkernel__Z20openmp_metadirectivePKdPdiiddb_F1L347_62' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z20openmp_metadirectivePKdPdiiddb_F1L347_62
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 28 registers, used 0 barriers, 400 bytes cmem[0]
+ptxas info    : Compile time = 4.381 ms
+ptxas info    : Compiling entry function 'nvkernel__Z23openmp_target_team_loopPKdPdiiddb_F1L190_16' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z23openmp_target_team_loopPKdPdiiddb_F1L190_16
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 4.464 ms
+ptxas info    : Compiling entry function 'nvkernel__Z18openmp_target_loopPKdPdiiddb_F1L309_54' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z18openmp_target_loopPKdPdiiddb_F1L309_54
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 4.447 ms
+ptxas info    : Compiling entry function 'nvkernel__Z27openmp_target_loop_collapsePKdPdiiddb_F1L334_60' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z27openmp_target_loop_collapsePKdPdiiddb_F1L334_60
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 3.829 ms
+ptxas info    : Compiling entry function 'nvkernel__Z23openmp_target_team_loopPKdPdiiddb_F1L181_14' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z23openmp_target_team_loopPKdPdiiddb_F1L181_14
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 4.456 ms
+ptxas info    : Compiling entry function 'nvkernel__Z42openmp_target_team_distribute_for_collapsePKdPdiiddb_F1L292_47' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z42openmp_target_team_distribute_for_collapsePKdPdiiddb_F1L292_47
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 28 registers, used 0 barriers, 408 bytes cmem[0]
+ptxas info    : Compile time = 4.378 ms
+ptxas info    : Compiling entry function 'nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L199_18' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L199_18
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 3.839 ms
+ptxas info    : Compiling entry function 'nvkernel__Z18openmp_target_loopPKdPdiiddb_F1L318_56' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z18openmp_target_loopPKdPdiiddb_F1L318_56
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 4.429 ms
+ptxas info    : Compiling entry function 'nvkernel__Z33openmp_target_team_distribute_forPKdPdiiddb_F1L254_32' for 'sm_89'
+ptxas info    : Function properties for nvkernel__Z33openmp_target_team_distribute_forPKdPdiiddb_F1L254_32
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 28 registers, used 0 barriers, 408 bytes cmem[0]
+ptxas info    : Compile time = 4.892 ms
+ptxas info    : Compiling entry function '_Z11cuda_kernelPKdPdiidd' for 'sm_89'
+ptxas info    : Function properties for _Z11cuda_kernelPKdPdiidd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 18 registers, used 0 barriers, 392 bytes cmem[0]
+ptxas info    : Compile time = 0.911 ms
