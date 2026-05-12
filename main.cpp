@@ -6,6 +6,8 @@
 //  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89,keepptx -fast  -cuda -lnvToolsExt  -o main main.cpp 
 // ptxas -v --gpu-name sm_89 main.n001.ptx &>out_ptxas.txt
 // -cuda for cuda kernel
+// ncu --set=full --import-source=yes -fo out ./main
+//  nsys profile ./main
 
 //we see
 
@@ -476,32 +478,32 @@ int main(int argc, char** argv)
     // ---- register kernels (name, fn, on_gpu) -
     std::vector<Kernel> kernels = {
         { "sequential",                              sequential,                              false},
-       // { "openmp_parallel_for",                     openmp_parallel_for,                     false},
-       // { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
+        { "openmp_parallel_for",                     openmp_parallel_for,                     false},
+        { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
         { "openmp_target_parallel_for",              openmp_target_parallel_for,              true},
-       // { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
+        { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
         { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     true},
-       // { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
+        { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
         { "openmp_target_team_loop",                 openmp_target_team_loop,                 true},
-       // { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
+        { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
         { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        true},
-       // { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
+        { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
         { "openmp_target_team_distribute",           openmp_target_team_distribute,           true},
-       // { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
+        { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
         { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           true},
-       // { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
+        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       true},
-       // { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
+        { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
         { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, true},
-        //{ "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
+        { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
         { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, true},
-       // { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
+        { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
         { "openmp_target_loop", openmp_target_loop, true},
-        //{ "openmp_target_loop", openmp_target_loop, false},
+        { "openmp_target_loop", openmp_target_loop, false},
         { "openmp_target_loop_collapse", openmp_target_loop_collapse, true},
-        //{ "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
+        { "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
         { "openmp_metadirective", openmp_metadirective, true},
-        //{ "openmp_metadirective", openmp_metadirective, false},
+        { "openmp_metadirective", openmp_metadirective, false},
 
         { "cuda", cuda, true},
 
