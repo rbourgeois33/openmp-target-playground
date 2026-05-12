@@ -27,7 +27,7 @@ static constexpr int    NY          = 2048;
 static constexpr double LX          = 1.0;
 static constexpr double LY          = 1.0;
 static constexpr double ALPHA       = 0.01;
-static constexpr int    NSTEP       = 2;
+static constexpr int    NSTEP       = 1000; //2 for ncu
 static constexpr int    PRINT_EVERY = 250;
 const long long N      = (long long)NX * NY;
 
