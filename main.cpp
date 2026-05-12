@@ -3,8 +3,20 @@
 //  Multi-kernel benchmark harness
 // ============================================================
 
-//  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89 -fast  -cuda -lnvToolsExt  -o main main.cpp 
+//  nvc++ -O3 -march=native -Minfo -mp=gpu -gpu=cc89,keepptx -fast  -cuda -lnvToolsExt  -o main main.cpp 
+// ptxas -v --gpu-name sm_89 main.n001.ptx &>out_ptxas.txt
 // -cuda for cuda kernel
+
+//we see
+
+// ptxas info    : Compiling entry function 'nvkernel__Z32openmp_target_team_loop_collapsePKdPdiiddb_F1L187_20' for 'sm_89'
+//     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+// ptxas info    : Used 26 registers, used 0 barriers, 392 bytes cmem[0]
+
+// ptxas info    : Function properties for _Z11cuda_kernelPKdPdiidd
+//     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+// ptxas info    : Used 18 registers, used 0 barriers, 392 bytes cmem[0]
+
 // OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main
 // OMP_PROC_BIND=true OMP_NUM_THREADS=24  ./main --no-sequential
 #include <cmath>
@@ -70,13 +82,14 @@ void sequential(const double* __restrict__ u,
                       double* __restrict__ un,
                 int nx, int ny, double rx, double ry, bool on_gpu)
 {
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // Parallelizes only the outer i loop across CPU threads. Good cache reuse.
@@ -88,13 +101,14 @@ void openmp_parallel_for(const double* __restrict__ u,
                          int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp parallel for
-    for (int i = 1; i < nx-1; ++i) //#omp parallel
+    for (int i = 1; i < nx-1; ++i){ //#omp parallel
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // Collapses both loops into one large iteration space.
@@ -105,13 +119,14 @@ void openmp_parallel_for_collapse(const double* __restrict__ u,
                                   int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp parallel for collapse(2) //#omp parallel
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 
@@ -124,13 +139,14 @@ void openmp_target_parallel_for(const double* __restrict__ u,
                                 int nx, int ny, double rx, double ry, bool on_gpu)
 { 
     #pragma omp target parallel for if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) //GPU: Loop parallelized across threads(128), schedule(static). Loop not vectorized/parallelized: not countable. CPU: Loop parallelized across threads, schedule(static)
+    for (int i = 1; i < nx-1; ++i){ //GPU: Loop parallelized across threads(128), schedule(static). Loop not vectorized/parallelized: not countable. CPU: Loop parallelized across threads, schedule(static)
         for (int j = 1; j < ny-1; ++j) {  //GPU: Generated vector simd code for the loop
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Poor performance(x5). 142blocks of 128 threads ? not sure whats going on. Poor maping of parallel for on GPU
@@ -141,13 +157,14 @@ void openmp_target_parallel_for_collapse(const double* __restrict__ u,
                                          int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target parallel for collapse(2) if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) // GPU Loop parallelized across threads(128), schedule(static) Loop not vectorized/parallelized: not countable Generated vector simd code for the loop. CPU: Loop parallelized across threads, schedule(static)
+    for (int i = 1; i < nx-1; ++i){ // GPU Loop parallelized across threads(128), schedule(static) Loop not vectorized/parallelized: not countable Generated vector simd code for the loop. CPU: Loop parallelized across threads, schedule(static)
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Poor performance(x8). 32 blocks of 128 threads = NX threads, only outer//
@@ -161,13 +178,14 @@ void openmp_target_team_loop(const double* __restrict__ u,
                              int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams loop if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) // GPU: Loop parallelized across teams, threads(128); Loop parallelized across threads
+    for (int i = 1; i < nx-1; ++i){ // GPU: Loop parallelized across teams, threads(128); Loop parallelized across threads
         for (int j = 1; j < ny-1; ++j) { //Loop run sequentially // Loop carried dependence of un-> prevents parallelization
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Full performance(x36). NX=4096 blocks of 128 thread. Fully //
@@ -178,13 +196,14 @@ void openmp_target_team_loop_collapse(const double* __restrict__ u,
                                       int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams loop collapse(2) if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) // Loop parallelized across teams, threads(128) collapse(2) Loop parallelized across threads
+    for (int i = 1; i < nx-1; ++i){ // Loop parallelized across teams, threads(128) collapse(2) Loop parallelized across threads
         for (int j = 1; j < ny-1; ++j) { //Generated vector simd code for the loop
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 
@@ -197,13 +216,14 @@ void openmp_target_team_distribute(const double* __restrict__ u,
                                    int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams distribute if (on_gpu)
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 
@@ -213,13 +233,14 @@ void openmp_target_team_distribute_collapse(const double* __restrict__ u,
                                    int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams distribute collapse(2) if (on_gpu)
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Not Full performance(x5). 32 blocks of 128 threads. 32*128=4096=NX. Only outer is //
@@ -230,13 +251,14 @@ void openmp_target_team_distribute_for(const double* __restrict__ u,
                                        int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams distribute parallel for if (on_gpu)
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Full performance(x36). NX blocks of 128 threads
@@ -248,7 +270,7 @@ void openmp_target_team_distribute_nestedfor(const double* __restrict__ u,
                                              int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams distribute if (on_gpu)
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         #pragma omp parallel for
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
@@ -256,6 +278,7 @@ void openmp_target_team_distribute_nestedfor(const double* __restrict__ u,
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Full performance(x36). Launches NX*NY threads; explicit full grid via collapse.
@@ -266,13 +289,14 @@ void openmp_target_team_distribute_for_collapse(const double* __restrict__ u,
                                                 int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target teams distribute parallel for collapse(2) if (on_gpu)
-    for (int i = 1; i < nx-1; ++i)
+    for (int i = 1; i < nx-1; ++i){
         for (int j = 1; j < ny-1; ++j) {
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 // GPU: Poor performance(x8). 32 blocks of 128 threads = NX threads, only outer//
@@ -282,13 +306,14 @@ void openmp_target_loop(const double* __restrict__ u,
                              int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target loop if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) 
+    for (int i = 1; i < nx-1; ++i) {
         for (int j = 1; j < ny-1; ++j) { 
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 //Full perf CPU et GPU !!
@@ -297,13 +322,14 @@ void openmp_target_loop_collapse(const double* __restrict__ u,
                              int nx, int ny, double rx, double ry, bool on_gpu)
 {
     #pragma omp target loop collapse(2) if (on_gpu)
-    for (int i = 1; i < nx-1; ++i) 
+    for (int i = 1; i < nx-1; ++i) {
         for (int j = 1; j < ny-1; ++j) { 
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 //Also possible with metadirective to e.g. not desacritavte parallel on CPU with a if that only should deactivate target
@@ -320,13 +346,14 @@ void openmp_metadirective(const double* __restrict__ u,
     #pragma omp metadirective \
         when( user={condition(on_gpu)}: target teams distribute parallel for collapse(2)) \
         default(parallel for collapse(2))     
-    for (int i = 1; i < nx-1; ++i) 
+    for (int i = 1; i < nx-1; ++i){ 
         for (int j = 1; j < ny-1; ++j) { 
             double center = u[idx(i,j)];
             double lap = (u[idx(i-1,j)] - 2.0*center + u[idx(i+1,j)]) * rx
                        + (u[idx(i,j-1)] - 2.0*center + u[idx(i,j+1)]) * ry;
             un[idx(i,j)] = center + lap;
         }
+    }
 }
 
 
@@ -449,32 +476,32 @@ int main(int argc, char** argv)
     // ---- register kernels (name, fn, on_gpu) -
     std::vector<Kernel> kernels = {
         { "sequential",                              sequential,                              false},
-        { "openmp_parallel_for",                     openmp_parallel_for,                     false},
-        { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
+       // { "openmp_parallel_for",                     openmp_parallel_for,                     false},
+       // { "openmp_parallel_for_collapse",            openmp_parallel_for_collapse,            false},
         { "openmp_target_parallel_for",              openmp_target_parallel_for,              true},
-        { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
+       // { "openmp_target_parallel_for",              openmp_target_parallel_for,              false},
         { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     true},
-        { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
+       // { "openmp_target_parallel_for_collapse",     openmp_target_parallel_for_collapse,     false},
         { "openmp_target_team_loop",                 openmp_target_team_loop,                 true},
-        { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
+       // { "openmp_target_team_loop",                 openmp_target_team_loop,                 false},
         { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        true},
-        { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
+       // { "openmp_target_team_loop_collapse",        openmp_target_team_loop_collapse,        false},
         { "openmp_target_team_distribute",           openmp_target_team_distribute,           true},
-        { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
+       // { "openmp_target_team_distribute",           openmp_target_team_distribute,           false},
         { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           true},
-        { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
+       // { "openmp_target_team_distribute_collapse",           openmp_target_team_distribute_collapse,           false},
         { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       true},
-        { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
+       // { "openmp_target_team_distribute_for",       openmp_target_team_distribute_for,       false},
         { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, true},
-        { "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
+        //{ "openmp_target_team_distribute_nestedfor", openmp_target_team_distribute_nestedfor, false},
         { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, true},
-        { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
+       // { "openmp_target_team_distribute_for_collapse", openmp_target_team_distribute_for_collapse, false},
         { "openmp_target_loop", openmp_target_loop, true},
-        { "openmp_target_loop", openmp_target_loop, false},
+        //{ "openmp_target_loop", openmp_target_loop, false},
         { "openmp_target_loop_collapse", openmp_target_loop_collapse, true},
-        { "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
+        //{ "openmp_target_loop_collapse", openmp_target_loop_collapse, false},
         { "openmp_metadirective", openmp_metadirective, true},
-        { "openmp_metadirective", openmp_metadirective, false},
+        //{ "openmp_metadirective", openmp_metadirective, false},
 
         { "cuda", cuda, true},
 
